@@ -94,6 +94,9 @@
         '<span class="tag ' + (s.module === 'listening' ? 'blue' : s.module === 'reading' ? 'accent' : s.module === 'writing' ? 'clay' : 'ochre') + '">' + Math.round(s.points) + ' 分</span></div>';
     }).join('');
     var issueHtml = '';
+    if (pending.sourceKind === 'pdf') {
+      issueHtml += '<div class="import-issues warnings"><b>' + icon('fileText') + ' PDF 文本已提取' + (pending.pdfPages ? '（' + pending.pdfPages + ' 页）' : '') + '</b><p>如果题目顺序或选项错乱，可以直接在上方编辑提取出的文字，再点「按编辑文本重新解析」。</p></div>';
+    }
     if (pending.errors && pending.errors.length) {
       issueHtml += '<div class="import-issues errors"><b>' + icon('alertCircle') + ' 需要先修正 ' + pending.errors.length + ' 个问题</b><ul>' + pending.errors.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul></div>';
     }
@@ -115,7 +118,9 @@
       '<div class="import-section-list">' + sections + '</div>' +
       '<div class="import-sub-head"><div><span class="eyebrow"><span class="dot"></span> 听力绑定</span><h3>把音频放到对应材料</h3></div><button class="btn btn-ghost btn-sm" type="button" data-action="auto-map-audio">' + icon('sparkles') + ' 重新自动匹配</button></div>' +
       '<div id="importAudioMapping"></div>' +
-      '<div class="import-preview-actions"><button class="btn btn-primary btn-lg" type="button" data-action="save-import" ' + (pending.errors.length ? 'disabled' : '') + '>' + icon('check') + ' 保存并加入刷题</button>' +
+      '<div class="import-preview-actions">' +
+        (pending.sourceKind === 'pdf' ? '<button class="btn btn-soft" type="button" data-action="reparse-pdf">' + icon('refresh') + ' 按编辑文本重新解析</button>' : '') +
+        '<button class="btn btn-primary btn-lg" type="button" data-action="save-import" ' + (pending.errors.length ? 'disabled' : '') + '>' + icon('check') + ' 保存并加入刷题</button>' +
         '<button class="btn btn-ghost" type="button" data-action="discard-preview">放弃预览</button></div>';
     renderAudioMapping();
   }
@@ -161,10 +166,40 @@
     try {
       if (selectedQuestionFile) {
         sourceKind = selectedQuestionFile.name.split('.').pop().toLowerCase();
+        if (sourceKind === 'pdf') {
+          if (!CET6.pdf) throw new Error('PDF 解析组件未加载，请刷新页面后重试');
+          CET6.toast('正在提取 PDF 文本…', 'clock');
+          var extracted = await CET6.pdf.extract(selectedQuestionFile);
+          if (!extracted.text || extracted.chars < 20) {
+            throw new Error('这个 PDF 没有可提取的文字，可能是扫描版。请先 OCR，或把题目文字复制到 TXT 模板再导入。');
+          }
+          text = extracted.text;
+          var ta = document.getElementById('importTextarea');
+          if (ta) ta.value = text;
+          var result = CET6.pdf.parseExamText(text, { sourceName: selectedQuestionFile.name, title: selectedQuestionFile.name.replace(/\.pdf$/i, '') });
+          if (selectedAnswerFile) {
+            try {
+              var pdfAnswerText = await readText(selectedAnswerFile);
+              CET6.imports.applyAnswerKey(result.record, CET6.imports.parseAnswerKey(pdfAnswerText));
+              result.errors = result.errors.filter(function (e) { return !/缺少可识别的答案/.test(e); });
+            } catch (e) { result.warnings.push('答案文件读取失败：' + e.message); }
+          }
+          pending = { record: result.record || { title: '', sections: [] }, errors: result.errors || [], warnings: result.warnings || [], sourceKind: 'pdf', pdfPages: extracted.pages };
+          if (pending.record && pending.record.id) {
+            audioMap = CET6.imports.autoMapAudio(pending.record, selectedAudioFiles);
+          }
+          updateFileInfo();
+          renderPreview();
+          var p = document.getElementById('importPreview');
+          if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if (pending.errors.length) CET6.toast('PDF 已提取，但还有 ' + pending.errors.length + ' 个问题需要修正', 'alertCircle');
+          else CET6.toast('PDF 解析完成，请检查预览');
+          return;
+        }
         text = await readText(selectedQuestionFile);
       } else {
-        var ta = document.getElementById('importTextarea');
-        text = ta ? ta.value : '';
+        var ta2 = document.getElementById('importTextarea');
+        text = ta2 ? ta2.value : '';
       }
       if (!text.trim()) { CET6.toast('先选择题目文件或粘贴题目文本', 'info'); return; }
       var result;
@@ -193,14 +228,30 @@
       }
       updateFileInfo();
       renderPreview();
-      var p = document.getElementById('importPreview');
-      if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      var p2 = document.getElementById('importPreview');
+      if (p2) p2.scrollIntoView({ behavior: 'smooth', block: 'start' });
       if (pending.errors.length) CET6.toast('解析完成，但还有 ' + pending.errors.length + ' 个问题需要修正', 'alertCircle');
       else CET6.toast('解析完成，可以检查后保存');
     } catch (err) {
       pending = null;
       renderPreview();
       CET6.toast(err.message || '解析失败，请检查文件格式', 'alertCircle');
+    }
+  }
+
+  async function reparsePdfText() {
+    var ta = document.getElementById('importTextarea');
+    if (!ta || !CET6.pdf) return;
+    if (!ta.value.trim()) { CET6.toast('编辑区没有文本可以解析', 'info'); return; }
+    try {
+      var result = CET6.pdf.parseExamText(ta.value, { sourceName: selectedQuestionFile ? selectedQuestionFile.name : 'PDF 文本' });
+      pending = { record: result.record || { title: '', sections: [] }, errors: result.errors || [], warnings: result.warnings || [], sourceKind: 'pdf', pdfPages: pending ? pending.pdfPages : null };
+      if (pending.record && pending.record.id) audioMap = CET6.imports.autoMapAudio(pending.record, selectedAudioFiles);
+      renderPreview();
+      if (!pending.errors.length) CET6.toast('已按编辑后的文本重新解析');
+      else CET6.toast('已重新解析，仍有 ' + pending.errors.length + ' 个问题', 'alertCircle');
+    } catch (err) {
+      CET6.toast(err.message || '重新解析失败', 'alertCircle');
     }
   }
 
@@ -275,8 +326,8 @@
             '<div class="import-step-head"><span class="import-step-no">01</span><div><span class="eyebrow"><span class="dot"></span> 选择文件</span><h2>题目文件 + 听力音频</h2><p>JSON 最稳；TXT / Markdown 使用页面提供的简单格式。音频可以多选。</p></div></div>' +
             '<div class="import-drop-grid">' +
               '<label class="import-drop" data-drop="question" for="questionFile">' +
-                '<input id="questionFile" type="file" accept=".json,.txt,.md,application/json,text/plain,text/markdown" hidden>' +
-                '<span class="import-drop-ico">' + icon('fileText') + '</span><b>选择题目文件</b><small>JSON / TXT / MD · 点击或拖入</small><span id="questionFileInfo" class="import-file-list">' + fileChips([], '还没有选择题目文件') + '</span>' +
+                '<input id="questionFile" type="file" accept=".json,.txt,.md,.pdf,application/json,text/plain,text/markdown,application/pdf" hidden>' +
+                '<span class="import-drop-ico">' + icon('fileText') + '</span><b>选择题目文件</b><small>PDF / JSON / TXT / MD · 点击或拖入</small><span id="questionFileInfo" class="import-file-list">' + fileChips([], '还没有选择题目文件') + '</span>' +
               '</label>' +
               '<label class="import-drop" data-drop="audio" for="audioFiles">' +
                 '<input id="audioFiles" type="file" accept=".mp3,.wav,.m4a,.ogg,.aac,audio/*" multiple hidden>' +
@@ -294,10 +345,11 @@
           '<div class="import-aside-card card">' +
             '<div class="card-head"><div><span class="eyebrow"><span class="dot"></span> 格式说明</span><h3 class="h3">怎么准备文件</h3></div></div>' +
             '<div class="import-format-list">' +
+              '<div><b>PDF（文本型）</b><p>直接从 PDF 提取文字并尝试识别 Part、题目、选项和答案。扫描版 PDF 没有文字层，需要先 OCR。</p></div>' +
               '<div><b>JSON</b><p>推荐的稳定格式。先下载模板，把题目、选项、答案、解析和音频文件名填进去。</p></div>' +
               '<div><b>TXT / Markdown</b><p>使用 <code>## Part</code> 分区、<code>### 材料</code>、<code>1.</code> 题号、<code>A.</code> 选项、<code>答案：</code> 和 <code>解析：</code>。模板里有完整示例。</p></div>' +
               '<div><b>听力音频</b><p>单独上传 MP3/WAV/M4A。文件名与题目里的 <code>audio</code> 一致会自动绑定，也可以在预览里手动选择。</p></div>' +
-              '<div><b>暂不支持</b><p>PDF/Word 不直接解析。请先在阅读器里复制文字保存为 TXT，按模板整理；扫描版 PDF 需要手动录入。</p></div>' +
+              '<div><b>解析限制</b><p>PDF 版式千差万别。选词填空和长篇匹配等复杂版式目前可能跳过；扫描件需先 OCR。</p></div>' +
             '</div>' +
             '<details class="import-json-hint"><summary>查看 JSON 结构</summary><pre>{\n  "title": "2025年12月真题",\n  "durationMin": 130,\n  "totalPoints": 710,\n  "sections": [{\n    "title": "Part II Listening",\n    "module": "listening",\n    "points": 248.5,\n    "units": [{\n      "title": "Conversation One",\n      "audio": "01.mp3",\n      "transcript": "...",\n      "questions": [{\n        "stem": "...",\n        "options": ["A", "B", "C", "D"],\n        "answer": 1,\n        "explanation": "...",\n        "tag": "细节题"\n      }]\n    }]\n  }]\n}</pre></details>' +
             '<a class="import-doc-link link-arrow" href="IMPORT_FORMAT.md" target="_blank" rel="noopener">完整格式说明 ' + icon('arrowUpRight') + '</a>' +
@@ -337,6 +389,7 @@
         if (e.target.closest('[data-action="download-text-template"]')) { CET6.imports.downloadTemplate('txt'); return; }
         if (e.target.closest('[data-action="pick-answer"]')) { if (ansInput) ansInput.click(); return; }
         if (e.target.closest('[data-action="parse-import"]')) { parseCurrent(); return; }
+        if (e.target.closest('[data-action="reparse-pdf"]')) { reparsePdfText(); return; }
         if (e.target.closest('[data-action="auto-map-audio"]')) { autoMap(); return; }
         if (e.target.closest('[data-action="discard-preview"]')) { resetPending(); return; }
         if (e.target.closest('[data-action="save-import"]')) { savePending(); return; }

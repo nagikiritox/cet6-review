@@ -142,6 +142,7 @@
       explanation: str(q.explanation || q.analysis || q.parse || ''),
       tag: str(q.tag || q.typeTag || defaultTag(module)),
       points: num(q.points, 1),
+      sourceNumber: q.sourceNumber || q.number || null,
       reference: reference,
       keyPoints: normalizeKeyPoints(q.keyPoints || q.keypoints),
       minWords: num(q.minWords || q.words, module === 'translation' ? 120 : (isTask ? 150 : 0)) || 0
@@ -328,10 +329,10 @@
       currentQuestion = null;
     }
 
-    function ensureQuestion(stem) {
+    function ensureQuestion(stem, sourceNumber) {
       if (!currentUnit) ensureUnit(currentSection ? currentSection.title : '综合题');
       flushBlock();
-      currentQuestion = { stem: stem || '', options: [], answer: '', explanation: '' };
+      currentQuestion = { stem: stem || '', options: [], answer: '', explanation: '', sourceNumber: sourceNumber || null };
       currentUnit.questions.push(currentQuestion);
     }
 
@@ -427,7 +428,7 @@
       }
       var qLine = /^(\d+)\s*[\.、\)]\s*(.+)$/.exec(line);
       if (qLine) {
-        ensureQuestion(qLine[2].trim());
+        ensureQuestion(qLine[2].trim(), Number(qLine[1]));
         continue;
       }
 
@@ -453,6 +454,7 @@
             options: q.options,
             answer: q.answer,
             explanation: q.explanation,
+            sourceNumber: q.sourceNumber,
             reference: unit.reference,
             keyPoints: unit.keyPoints,
             minWords: unit.minWords
@@ -527,12 +529,13 @@
   }
 
   function applyAnswerKey(record, answerMap) {
-    var index = 0;
+    var fallback = 0;
     record.sections.forEach(function (section) {
       section.units.forEach(function (unit) {
         unit.questions.forEach(function (q) {
-          index++;
-          if (q.type === 'choice' && q.answer < 0 && answerMap[index]) q.answer = normalizeAnswer(answerMap[index], q.options);
+          var num = q.sourceNumber || (++fallback);
+          if (q.sourceNumber) fallback = q.sourceNumber;
+          if (q.type === 'choice' && q.answer < 0 && answerMap[num]) q.answer = normalizeAnswer(answerMap[num], q.options);
         });
       });
     });
@@ -701,17 +704,22 @@
     var audioRecords = [];
     var map = mapping || {};
     var n = 0;
+    var keyByFile = {};
     (record.sections || []).forEach(function (section) {
       (section.units || []).forEach(function (unit) {
         var file = map[unit.id];
         if (!file) { unit.audioKey = null; return; }
-        n++;
-        var key = record.id + '-a' + n;
-        var blob = file.blob ? file.blob : file;
-        var rec = { key: key, name: file.name || ('audio-' + n), type: file.type || '', size: file.size || (blob && blob.size) || 0, blob: blob };
-        audioRecords.push(rec);
+        var fk = file.name + '|' + file.size + '|' + (file.lastModified || 0);
+        var key = keyByFile[fk];
+        if (!key) {
+          n++;
+          key = record.id + '-a' + n;
+          keyByFile[fk] = key;
+          var blob = file.blob ? file.blob : file;
+          audioRecords.push({ key: key, name: file.name || ('audio-' + n), type: file.type || '', size: file.size || (blob && blob.size) || 0, blob: blob });
+          state.audioBlobs[key] = blob;
+        }
         unit.audioKey = key;
-        state.audioBlobs[key] = blob;
       });
     });
     return audioRecords;
@@ -991,6 +999,10 @@
       var used = {};
       var mapping = {};
       files = files || [];
+      if (files.length === 1) {
+        listening.forEach(function (unit) { mapping[unit.id] = files[0]; });
+        return mapping;
+      }
       listening.forEach(function (unit) {
         var wanted = basename(unit.audioName).toLowerCase();
         var exact = files.find(function (f) { return basename(f.name).toLowerCase() === wanted && !used[f.name]; });
