@@ -86,6 +86,7 @@ cet6-review/
 │  ├─ units-sets.js        # 3 套套题训练单元
 │  ├─ units-drills.js      # 四类专项练习单元
 │  └─ papers.js            # 套卷结构与计分配置
+│  └─ exam-packs.js        # 内置真题解析包（2024年6月第1套）
 └─ assets/
    ├─ fonts/               # Schibsted Grotesk 本地字体
    ├─ vendor/              # PDF.js（PDF 文本提取）
