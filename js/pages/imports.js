@@ -35,6 +35,15 @@
     return (n / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
+  async function readAnswerText(file) {
+    if (!file) return '';
+    if (/\.pdf$/i.test(file.name) && CET6.pdf) {
+      var extracted = await CET6.pdf.extract(file);
+      return extracted.text || '';
+    }
+    return readText(file);
+  }
+
   function fileChips(files, emptyText) {
     if (!files || !files.length) return '<span class="import-file-empty">' + emptyText + '</span>';
     return files.map(function (f) {
@@ -179,7 +188,7 @@
           var result = CET6.pdf.parseExamText(text, { sourceName: selectedQuestionFile.name, title: selectedQuestionFile.name.replace(/\.pdf$/i, '') });
           if (selectedAnswerFile) {
             try {
-              var pdfAnswerText = await readText(selectedAnswerFile);
+              var pdfAnswerText = await readAnswerText(selectedAnswerFile);
               CET6.imports.applyAnswerKey(result.record, CET6.imports.parseAnswerKey(pdfAnswerText));
               result.errors = result.errors.filter(function (e) { return !/缺少可识别的答案/.test(e); });
             } catch (e) { result.warnings.push('答案文件读取失败：' + e.message); }
@@ -213,7 +222,7 @@
       }
       if (selectedAnswerFile) {
         try {
-          var answerText = await readText(selectedAnswerFile);
+          var answerText = await readAnswerText(selectedAnswerFile);
           var answerMap = CET6.imports.parseAnswerKey(answerText);
           CET6.imports.applyAnswerKey(result.record, answerMap);
           // Answer-key merge can fix choice questions; recompute by removing old answer errors and re-normalizing is overkill.
@@ -245,6 +254,13 @@
     if (!ta.value.trim()) { CET6.toast('编辑区没有文本可以解析', 'info'); return; }
     try {
       var result = CET6.pdf.parseExamText(ta.value, { sourceName: selectedQuestionFile ? selectedQuestionFile.name : 'PDF 文本' });
+      if (selectedAnswerFile) {
+        try {
+          var answerText = await readAnswerText(selectedAnswerFile);
+          CET6.imports.applyAnswerKey(result.record, CET6.imports.parseAnswerKey(answerText));
+          result.errors = result.errors.filter(function (e) { return !/缺少可识别的答案/.test(e); });
+        } catch (e) { result.warnings.push('答案文件读取失败：' + e.message); }
+      }
       pending = { record: result.record || { title: '', sections: [] }, errors: result.errors || [], warnings: result.warnings || [], sourceKind: 'pdf', pdfPages: pending ? pending.pdfPages : null };
       if (pending.record && pending.record.id) audioMap = CET6.imports.autoMapAudio(pending.record, selectedAudioFiles);
       renderPreview();
@@ -334,7 +350,7 @@
                 '<span class="import-drop-ico">' + icon('headphones') + '</span><b>选择听力音频</b><small>MP3 / WAV / M4A · 可以多选</small><span id="audioFilesInfo" class="import-file-list">' + fileChips([], '还没有选择听力音频') + '</span>' +
               '</label>' +
             '</div>' +
-            '<div class="import-file-extra"><label class="import-answer-file"><span>' + icon('fileText') + ' 答案文件（可选，答案与题目分开时使用）</span><input id="answerFile" type="file" accept=".txt,.md,text/plain" hidden><button class="btn btn-ghost btn-sm" type="button" data-action="pick-answer">' + icon('upload') + ' 选择答案文本</button><span id="answerFileInfo" class="import-file-list">' + fileChips([], '可选：答案单独放在文本文件里时再选择') + '</span></label></div>' +
+            '<div class="import-file-extra"><label class="import-answer-file"><span>' + icon('fileText') + ' 答案文件（可选，答案与题目分开时使用）</span><input id="answerFile" type="file" accept=".txt,.md,.pdf,text/plain,application/pdf" hidden><button class="btn btn-ghost btn-sm" type="button" data-action="pick-answer">' + icon('upload') + ' 选择答案文件</button><span id="answerFileInfo" class="import-file-list">' + fileChips([], '可选：答案单独放在 TXT / MD / PDF 里时再选择') + '</span></label></div>' +
             '<div class="import-or"><span>或者直接粘贴题目文本</span></div>' +
             '<textarea id="importTextarea" class="textarea import-textarea" placeholder="粘贴从 PDF / Word 复制出来的题目文本，按模板整理后点击解析。&#10;&#10;如果使用 JSON 文件，可以跳过这里。"></textarea>' +
             '<div class="import-parse-actions"><button class="btn btn-primary" type="button" data-action="parse-import">' + icon('sparkles') + ' 解析并预览</button><span class="small muted">解析只在本地浏览器进行，不会上传服务器。</span></div>' +
