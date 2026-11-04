@@ -885,8 +885,8 @@
       var unit = data.getUnit(it.unitId);
       if (!q || !unit) return '';
       var task = it.type === 'writing' || it.type === 'translation';
-      var your = task ? (typeof it.userAnswer === 'string' ? it.userAnswer : '') : (typeof it.userAnswer === 'number' ? LETTERS[it.userAnswer] + '. ' + q.options[it.userAnswer] : '未作答');
-      var right = task ? (it.scorePct != null ? '自评 ' + it.scorePct + ' 分' : '待自评') : LETTERS[q.answer] + '. ' + q.options[q.answer];
+      var your = task ? (typeof it.userAnswer === 'string' ? it.userAnswer : '') : optionText(q, typeof it.userAnswer === 'number' ? it.userAnswer : -1);
+      var right = task ? (it.scorePct != null ? '自评 ' + it.scorePct + ' 分' : '待自评') : optionText(q, q.answer);
       return '<details class="wrong-review" data-wrong="' + it.qid + '">' +
         '<summary><span class="wrong-status">' + icon('x') + '</span><div class="wrong-summary"><span class="wrong-tag">' + esc(data.moduleName(it.module)) + (q.tag ? ' · ' + esc(q.tag) : '') + '</span><span class="wrong-stem en">' + esc(q.stem || unit.title) + '</span></div><span class="wrong-expand">' + icon('chevronDown') + '</span></summary>' +
         '<div class="wrong-detail">' +
@@ -898,6 +898,58 @@
       '</details>';
     }).join('');
     return '<section class="section"><div class="section-head"><div><span class="eyebrow"><span class="dot"></span> 错题复盘</span><h2>做错的 ' + wrongItems.length + ' 题</h2><p>逐个展开，看看是定位问题，还是理解问题。</p></div><a class="link-arrow" href="#/stats/wrong">进入错题本 ' + icon('arrowRight') + '</a></div><div class="wrong-review-list">' + cards + '</div></section>';
+  }
+
+  function optionText(q, idx) {
+    if (!q || idx == null || idx < 0) return '未作答';
+    var t = q.options && q.options[idx] != null ? String(q.options[idx]) : '';
+    if (!t || t === LETTERS[idx]) return LETTERS[idx];
+    return LETTERS[idx] + '. ' + t;
+  }
+
+  function fullReview(attempt) {
+    if (attempt.kind !== 'import' || !attempt.items || !attempt.items.length) return '';
+    var objective = attempt.items.filter(function (it) {
+      return it.type !== 'writing' && it.type !== 'translation';
+    });
+    if (!objective.length) return '';
+    var cards = objective.map(function (it, idx) {
+      var q = data.getQuestion(it.qid);
+      var unit = data.getUnit(it.unitId);
+      if (!q || !unit) return '';
+      var right = optionText(q, q.answer);
+      var your = optionText(q, typeof it.userAnswer === 'number' ? it.userAnswer : -1);
+      var tone = it.answered ? (it.correct ? 'accent' : 'rose') : 'outline';
+      var mark = it.answered ? (it.correct ? '正确' : '错误') : '未作答';
+      return '<details class="wrong-review full-review-card" data-review="' + it.qid + '">' +
+        '<summary><span class="wrong-status ' + tone + '">' + icon(it.correct ? 'check' : (it.answered ? 'x' : 'minus')) + '</span>' +
+          '<div class="wrong-summary"><span class="wrong-tag">' + esc(data.moduleName(it.module)) + (q.tag ? ' · ' + esc(q.tag) : '') + ' · ' + mark + '</span>' +
+          '<span class="wrong-stem en">' + esc(q.stem || unit.title) + '</span></div>' +
+          '<span class="wrong-expand">' + icon('chevronDown') + '</span></summary>' +
+        '<div class="wrong-detail">' +
+          '<div class="wrong-answers"><div><span>你的答案</span><b class="en ' + (it.correct ? 'right' : 'wrong') + '">' + esc(your) + '</b></div><div><span>正确答案</span><b class="en right">' + esc(right) + '</b></div></div>' +
+          (q.explanation ? '<p class="wrong-explain">' + esc(q.explanation) + '</p>' : '') +
+        '</div>' +
+      '</details>';
+    }).join('');
+
+    var seen = {};
+    var units = [];
+    attempt.items.forEach(function (it) {
+      var unit = data.getUnit(it.unitId);
+      if (!unit || unit.module !== 'listening' || !unit.transcript || seen[unit.id]) return;
+      seen[unit.id] = true;
+      units.push(unit);
+    });
+    var transcriptHtml = units.length ? '<details class="attempt-details full-transcripts"><summary><div><span class="eyebrow"><span class="dot"></span> 听力原文</span><h2>' + units.length + ' 篇听力材料</h2></div><span class="attempt-detail-count">展开 ' + icon('chevronDown') + '</span></summary><div class="full-transcript-list">' + units.map(function (unit) {
+      return '<details class="transcript full-transcript"><summary>' + esc(unit.title) + '</summary><div class="transcript-text">' + renderPassage(unit.transcript) + '</div></details>';
+    }).join('') + '</div></details>' : '';
+
+    return '<section class="section full-review-section">' +
+      '<div class="section-head"><div><span class="eyebrow"><span class="dot"></span> 全卷解析</span><h2>' + objective.length + ' 道客观题逐题对照</h2><p>不管对错，都可以展开查看正确答案与解析。</p></div></div>' +
+      '<details class="attempt-details full-review-wrap"><summary><div><span class="eyebrow"><span class="dot"></span> 答案与解析</span><h2>展开全部 ' + objective.length + ' 题</h2></div><span class="attempt-detail-count">' + objective.length + ' 题 ' + icon('chevronDown') + '</span></summary><div class="wrong-review-list full-review-list">' + cards + '</div></details>' +
+      transcriptHtml +
+    '</section>';
   }
 
   function resultActions(attempt) {
@@ -961,6 +1013,7 @@
         '</div>' +
         selfAssessCards(attempt) +
         wrongReview(attempt) +
+        fullReview(attempt) +
         attemptDetail(attempt) +
       '</div>';
     },
