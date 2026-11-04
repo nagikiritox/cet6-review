@@ -14,7 +14,7 @@
 
   var trendFilter = 'all';
   var wrongFilter = { module: 'all', includeMastered: false };
-  var LETTERS = ['A', 'B', 'C', 'D'];
+  var LETTERS = 'ABCDEFGHIJKLMNO'.split('');
 
   function statsTabs(active) {
     return '<div class="segmented stats-tabs">' +
@@ -492,3 +492,4 @@
     cleanup: function () {}
   };
 })();
+

@@ -18,7 +18,7 @@
   var keyHandler = null;
   var beforeUnload = null;
 
-  var LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+  var LETTERS = 'ABCDEFGHIJKLMNO'.split('');
 
   function isTaskQuestion(q, unit) {
     return q.type === 'writing' || q.type === 'translation' || unit.module === 'writing' || unit.module === 'translation';
@@ -982,3 +982,4 @@
     return '把这次错题逐个展开，对照解析弄懂；再回专项练习，从最小的那一组重新开始。';
   }
 })();
+
