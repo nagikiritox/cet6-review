@@ -1490,6 +1490,7 @@
 .import-issues p { margin-top: 3px; }
 .import-issues.errors { background: var(--rose-soft); color: var(--rose); }
 .import-issues.warnings { background: var(--ochre-soft); color: var(--ochre-ink); }
+.import-issues.success { background: var(--accent-soft); color: var(--accent); }
 .import-section-list { display: flex; flex-direction: column; gap: 5px; margin-top: 14px; }
 .import-section-row {
   display: flex; align-items: center; gap: 11px; padding: 9px 11px;

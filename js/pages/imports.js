@@ -44,6 +44,36 @@
     return readText(file);
   }
 
+  function basename(name) {
+    return String(name || '').split(/[\\/]/).pop();
+  }
+
+  async function sha256Hex(file) {
+    if (!window.crypto || !crypto.subtle || !file.arrayBuffer) return null;
+    try {
+      var buf = await file.arrayBuffer();
+      var digest = await crypto.subtle.digest('SHA-256', buf);
+      return Array.prototype.map.call(new Uint8Array(digest), function (b) {
+        return b.toString(16).padStart(2, '0');
+      }).join('');
+    } catch (e) { return null; }
+  }
+
+  async function findExamPack(pdfFile) {
+    var packs = window.CET6_EXAM_PACKS || [];
+    if (!pdfFile || !packs.length) return null;
+    var hash = await sha256Hex(pdfFile);
+    var size = pdfFile.size;
+    var name = basename(pdfFile.name);
+    for (var i = 0; i < packs.length; i++) {
+      var p = packs[i];
+      if (!p || !p.pdf || !p.source) continue;
+      if (hash && p.pdf.sha256 && String(p.pdf.sha256).toLowerCase() === hash) return p;
+      if (!hash && p.pdf.size === size && basename(p.pdf.name) === name) return p;
+    }
+    return null;
+  }
+
   function fileChips(files, emptyText) {
     if (!files || !files.length) return '<span class="import-file-empty">' + emptyText + '</span>';
     return files.map(function (f) {
@@ -103,6 +133,9 @@
         '<span class="tag ' + (s.module === 'listening' ? 'blue' : s.module === 'reading' ? 'accent' : s.module === 'writing' ? 'clay' : 'ochre') + '">' + Math.round(s.points) + ' 分</span></div>';
     }).join('');
     var issueHtml = '';
+    if (pending.sourceKind === 'pack') {
+      issueHtml += '<div class="import-issues success"><b>' + icon('sparkles') + ' 已匹配内置解析包' + (pending.packTitle ? '：' + esc(pending.packTitle) : '') + '</b><p>听力原文、55 道客观题答案与逐题解析已经自动载入；可直接绑定音频后保存。</p></div>';
+    }
     if (pending.sourceKind === 'pdf') {
       issueHtml += '<div class="import-issues warnings"><b>' + icon('fileText') + ' PDF 文本已提取' + (pending.pdfPages ? '（' + pending.pdfPages + ' 页）' : '') + '</b><p>如果题目顺序或选项错乱，可以直接在上方编辑提取出的文字，再点「按编辑文本重新解析」。</p></div>';
     }
@@ -177,6 +210,33 @@
         sourceKind = selectedQuestionFile.name.split('.').pop().toLowerCase();
         if (sourceKind === 'pdf') {
           if (!CET6.pdf) throw new Error('PDF 解析组件未加载，请刷新页面后重试');
+          CET6.toast('正在识别真题…', 'clock');
+          var pack = await findExamPack(selectedQuestionFile);
+          if (pack) {
+            var packed = CET6.imports.normalizePaper(pack.source, { sourceName: selectedQuestionFile.name });
+            var packWarnings = (packed.warnings || []).slice();
+            if (!selectedAudioFiles.length) packWarnings.push('还没有选择听力音频；保存后听力题会没有声音。');
+            pending = {
+              record: packed.record || { title: '', sections: [] },
+              errors: packed.errors || [],
+              warnings: packWarnings,
+              sourceKind: 'pack',
+              packTitle: pack.title
+            };
+            if (pending.record && pending.record.id) {
+              pending.record.title = pack.title || pending.record.title;
+              pending.record.subtitle = '内置解析包 · 听力原文/答案/解析';
+              pending.record.description = '上传的 PDF 已匹配内置解析包，听力原文、答案与解析已自动载入。';
+              audioMap = CET6.imports.autoMapAudio(pending.record, selectedAudioFiles);
+            }
+            updateFileInfo();
+            renderPreview();
+            var packPreview = document.getElementById('importPreview');
+            if (packPreview) packPreview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (pending.errors.length) CET6.toast('已载入内置解析包，但还有 ' + pending.errors.length + ' 个问题需要修正', 'alertCircle');
+            else CET6.toast('已识别：' + pack.title + ' · 听力原文与答案解析已载入');
+            return;
+          }
           CET6.toast('正在提取 PDF 文本…', 'clock');
           var extracted = await CET6.pdf.extract(selectedQuestionFile);
           if (!extracted.text || extracted.chars < 20) {
@@ -362,6 +422,7 @@
             '<div class="card-head"><div><span class="eyebrow"><span class="dot"></span> 格式说明</span><h3 class="h3">怎么准备文件</h3></div></div>' +
             '<div class="import-format-list">' +
               '<div><b>PDF（文本型）</b><p>直接从 PDF 提取文字并尝试识别 Part、题目、选项和答案。扫描版 PDF 没有文字层，需要先 OCR。</p></div>' +
+              '<div><b>内置解析包</b><p>当前已内置 <b>2024年6月第1套</b> 的完整听力原文、答案与解析。上传同版 PDF 后会自动识别并载入，不依赖网络或 API。</p></div>' +
               '<div><b>JSON</b><p>推荐的稳定格式。先下载模板，把题目、选项、答案、解析和音频文件名填进去。</p></div>' +
               '<div><b>TXT / Markdown</b><p>使用 <code>## Part</code> 分区、<code>### 材料</code>、<code>1.</code> 题号、<code>A.</code> 选项、<code>答案：</code> 和 <code>解析：</code>。模板里有完整示例。</p></div>' +
               '<div><b>听力音频</b><p>单独上传 MP3/WAV/M4A。文件名与题目里的 <code>audio</code> 一致会自动绑定，也可以在预览里手动选择。</p></div>' +
