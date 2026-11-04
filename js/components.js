@@ -79,12 +79,12 @@
 
   components.attemptRow = function (a, opts) {
     opts = opts || {};
-    var kindLabel = a.kind === 'mock' ? '全真模拟' : a.kind === 'set' ? '套题训练' : a.kind === 'wrong' ? '错题重练' : '专项练习';
-    var tone = a.kind === 'mock' ? 'pine' : a.kind === 'set' ? 'blue' : a.module === 'listening' ? 'blue' : a.module === 'reading' ? 'accent' : a.module === 'writing' ? 'clay' : 'ochre';
+    var kindLabel = a.kind === 'mock' ? '全真模拟' : a.kind === 'set' ? '套题训练' : a.kind === 'import' ? '导入真题' : a.kind === 'wrong' ? '错题重练' : '专项练习';
+    var tone = a.kind === 'mock' ? 'pine' : a.kind === 'set' ? 'blue' : a.kind === 'import' ? 'ochre' : a.module === 'listening' ? 'blue' : a.module === 'reading' ? 'accent' : a.module === 'writing' ? 'clay' : 'ochre';
     var href = '#/result/' + a.id;
-    var score = a.kind === 'mock' ? Math.round(a.earned) + ' / ' + Math.round(a.totalPoints) : a.scorePct + '%';
+    var score = (a.kind === 'mock' || a.kind === 'import') ? Math.round(a.earned) + ' / ' + Math.round(a.totalPoints || 710) : a.scorePct + '%';
     return '<a class="attempt-row" href="' + href + '">' +
-      '<span class="attempt-ico accent-' + tone + '">' + icon(a.kind === 'drill' ? (CET6.data.moduleMeta(a.module).icon || 'sparkles') : a.kind === 'wrong' ? 'refresh' : 'fileText') + '</span>' +
+      '<span class="attempt-ico accent-' + tone + '">' + icon(a.kind === 'drill' ? (CET6.data.moduleMeta(a.module).icon || 'sparkles') : a.kind === 'wrong' ? 'refresh' : a.kind === 'import' ? 'upload' : 'fileText') + '</span>' +
       '<span class="attempt-main">' +
       '<span class="attempt-title">' + esc(a.title) + (a.demo ? ' <span class="tag">示例</span>' : '') + '</span>' +
       '<span class="attempt-meta">' + kindLabel + ' · ' + CET6.relativeDay(a.finishedAt) + ' · 正确率 ' + a.accuracy + '%</span>' +
@@ -204,7 +204,7 @@
   components.lineChart = function (points, opts) {
     opts = opts || {};
     if (!points || !points.length) {
-      return components.emptyState({ title: '还没有分数轨迹', text: '完成一套全真模拟或套题训练，这里会画出你的分数变化。', action: '<a class="btn btn-sm btn-soft" href="#/practice/mock">去刷一套</a>' });
+      return components.emptyState({ title: '还没有分数轨迹', text: '完成一套全真模拟、套题训练或导入真题，这里会画出你的分数变化。', action: '<a class="btn btn-sm btn-soft" href="#/practice/mock">去刷一套</a>' });
     }
     var W = 720, H = 260;
     var padL = 42, padR = 20, padT = 22, padB = 40;
@@ -229,7 +229,7 @@
     var dots = coords.map(function (c) {
       return '<g class="chart-point">' +
         '<circle cx="' + c.x + '" cy="' + c.y + '" r="9" fill="var(--surface)" stroke="none" opacity="0"/>' +
-        '<circle cx="' + c.x + '" cy="' + c.y + '" r="4.5" fill="var(--surface)" stroke="' + (c.p.kind === 'mock' ? 'var(--accent)' : 'var(--blue)') + '" stroke-width="2.4"/>' +
+        '<circle cx="' + c.x + '" cy="' + c.y + '" r="4.5" fill="var(--surface)" stroke="' + (c.p.kind === 'mock' ? 'var(--accent)' : c.p.kind === 'import' ? 'var(--ochre)' : 'var(--blue)') + '" stroke-width="2.4"/>' +
         '<title>' + esc(c.p.title + ' · ' + c.p.scorePct + '%') + '</title>' +
         '</g>';
     }).join('');
@@ -249,7 +249,7 @@
       '<path d="' + line + '" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>' +
       dots + labels +
       '</svg>' +
-      '<div class="chart-legend"><span><i class="dot accent"></i>全真模拟</span><span><i class="dot blue"></i>套题训练</span><span class="chart-note">纵轴为得分率 %</span></div>' +
+      '<div class="chart-legend"><span><i class="dot accent"></i>全真模拟</span><span><i class="dot blue"></i>套题训练</span><span><i class="dot ochre"></i>导入真题</span><span class="chart-note">纵轴为得分率 %</span></div>' +
       '</div>';
   };
 

@@ -53,7 +53,7 @@
           sectionTitle: r.section ? r.section.title : ''
         };
       });
-      s.mode = paper.type === 'mock' ? 'mock' : 'set';
+      s.mode = paper.type === 'set' ? 'set' : 'mock';
       s.kind = paper.type;
       s.refId = paper.id;
       s.title = paper.title;
@@ -145,6 +145,7 @@
   }
 
   function modeLabel() {
+    if (session.kind === 'import') return '导入真题 · IMPORT';
     if (session.mode === 'mock') return '全真模拟 · MOCK';
     if (session.mode === 'set') return '套题训练 · SET';
     if (session.mode === 'wrong') return '错题重练 · REVIEW';
@@ -189,7 +190,7 @@
         '<div class="listen-head"><span class="listen-kicker">' + icon('headphones') + ' LISTENING · ' + esc(listenKind(unit.kind)) + '</span>' + ui.difficulty(unit.difficulty || 2) + '</div>' +
         '<h2>' + esc(unit.title) + '</h2>' +
         '<p class="listen-desc">' + esc(unit.instructions || '听音频，选择最合适的答案。音频可回放。') + '</p>' +
-        (unit.audio ? ui.audioPlayer(unit.audio, unit.title) : '<div class="audio-missing">' + icon('alertCircle') + ' 音频文件生成中</div>') +
+        (unit.audio ? ui.audioPlayer(unit.audio, unit.title) : '<div class="audio-missing">' + icon('alertCircle') + ' 未绑定听力音频，请回到导入页重新绑定</div>') +
         (checked ? renderTranscript(unit, true) : '<div class="transcript-locked">' + icon('eye') + ' 听力原文将在提交后开放</div>') +
       '</section>';
     } else if (task) {
@@ -746,9 +747,9 @@
     var color = CET6.scoreColor(pct);
     var label;
     var value;
-    if (attempt.kind === 'mock') {
+    if (attempt.kind === 'mock' || attempt.kind === 'import') {
       value = Math.round(attempt.earned);
-      label = '估分 / 710';
+      label = '估分 / ' + Math.round(attempt.totalPoints || 710);
     } else if (attempt.kind === 'set') {
       value = Math.round(attempt.earned);
       label = '得分 / 100';
@@ -761,7 +762,7 @@
         '<div class="result-ring-text"><b class="num">' + value + '</b><span>' + label + '</span><small>得分率 ' + pct + '%</small></div>' +
       '</div>' +
       '<div class="result-hero-copy">' +
-        '<span class="eyebrow"><span class="dot"></span> ' + (attempt.kind === 'mock' ? '全真模拟报告' : attempt.kind === 'set' ? '套题训练报告' : attempt.kind === 'wrong' ? '错题重练报告' : '专项练习报告') + '</span>' +
+        '<span class="eyebrow"><span class="dot"></span> ' + (attempt.kind === 'import' ? '导入真题报告' : attempt.kind === 'mock' ? '全真模拟报告' : attempt.kind === 'set' ? '套题训练报告' : attempt.kind === 'wrong' ? '错题重练报告' : '专项练习报告') + '</span>' +
         '<h1 class="h1">' + esc(attempt.title) + '</h1>' +
         '<p class="muted">' + CET6.fmtDateFull(attempt.finishedAt) + ' · 用时 ' + CET6.fmtDuration(attempt.durationSec) + '</p>' +
         '<div class="result-hero-tags">' +
@@ -900,7 +901,7 @@
   }
 
   function resultActions(attempt) {
-    var retryHref = attempt.kind === 'mock' || attempt.kind === 'set'
+    var retryHref = attempt.kind === 'mock' || attempt.kind === 'set' || attempt.kind === 'import'
       ? '#/quiz/paper/' + attempt.refId
       : attempt.kind === 'wrong' ? '#/quiz/wrong'
       : attempt.refId && attempt.refId.indexOf('drill-') === 0 ? '#/quiz/drill/' + attempt.refId.replace('drill-', '')

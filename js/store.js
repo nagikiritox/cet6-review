@@ -713,9 +713,8 @@
 
   function getScoreTrend(kind) {
     var list = state.attempts.filter(function (a) {
-      if (a.kind !== 'mock' && a.kind !== 'set') return false;
-      if (kind === 'mock' && a.kind !== 'mock') return false;
-      if (kind === 'set' && a.kind !== 'set') return false;
+      if (a.kind !== 'mock' && a.kind !== 'set' && a.kind !== 'import') return false;
+      if (kind && kind !== 'all' && a.kind !== kind) return false;
       return true;
     }).sort(function (a, b) { return a.finishedAt - b.finishedAt; });
     return list.slice(-12).map(function (a) {

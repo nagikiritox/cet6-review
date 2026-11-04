@@ -14,20 +14,22 @@
   var TABS = [
     { id: 'mock', label: '真题模拟', href: '#/practice/mock', icon: 'fileText' },
     { id: 'sets', label: '套题训练', href: '#/practice/sets', icon: 'layers' },
-    { id: 'drills', label: '专项练习', href: '#/practice/drills', icon: 'target' }
+    { id: 'drills', label: '专项练习', href: '#/practice/drills', icon: 'target' },
+    { id: 'imports', label: '导入真题', href: '#/practice/imports', icon: 'upload' }
   ];
 
   function practiceHeader(tab) {
     var sub = {
       mock: '完整流程、严格计时，一次性走完写作、听力、阅读与翻译。',
       sets: '45 分钟轻量套卷，保持手感，也保持节奏。',
-      drills: '把听力、阅读、翻译、写作拆开来，一处一处地练。'
+      drills: '把听力、阅读、翻译、写作拆开来，一处一处地练。',
+      imports: '导入你自己的真题题目与听力音频，和内置套卷一起作答、一起统计。'
     }[tab];
     return ui.pageHead({
       eyebrow: 'PRACTICE · 刷题',
       title: '今天，练哪一块？',
       desc: sub,
-      actions: '<a class="btn btn-soft btn-sm" href="#/stats/wrong">' + icon('refresh') + ' 错题重练</a>'
+      actions: '<a class="btn btn-soft btn-sm" href="#/imports">' + icon('upload') + ' 导入真题</a><a class="btn btn-soft btn-sm" href="#/stats/wrong">' + icon('refresh') + ' 错题重练</a>'
     });
   }
 
@@ -78,6 +80,90 @@
       '<text x="28" y="68" fill="rgba(255,255,255,.92)" font-family="Schibsted Grotesk, sans-serif" font-size="30" font-weight="600" letter-spacing="-1">LAGOM</text>' +
       '<text x="28" y="88" fill="rgba(255,255,255,.55)" font-family="Schibsted Grotesk, sans-serif" font-size="9" letter-spacing="3">CET-6 PRACTICE</text>' +
       '</svg>';
+  }
+
+  function importsSection() {
+    var papers = CET6.imports ? CET6.imports.list() : [];
+    if (!papers.length) {
+      return '<section class="practice-section">' +
+        '<div class="import-empty-card">' +
+          '<div class="import-empty-art">' + icon('upload') + '</div>' +
+          '<span class="eyebrow"><span class="dot"></span> IMPORT · 导入真题</span>' +
+          '<h2>把你手里的真题，<br>放进同一个练习场。</h2>' +
+          '<p>上传 <b>题目文件（JSON / TXT / MD）</b> 和 <b>听力音频（MP3 / WAV / M4A）</b>，导入后会生成一套完整的真题卷，和内置模拟卷一样计时、交卷、估分、进错题本。</p>' +
+          '<div class="import-empty-actions">' +
+            '<a class="btn btn-primary btn-lg" href="#/imports">' + icon('upload') + ' 导入第一套真题</a>' +
+            '<button class="btn btn-soft" type="button" data-action="download-template">' + icon('download') + ' 下载 JSON 模板</button>' +
+          '</div>' +
+          '<div class="import-empty-meta">' + icon('info') + ' 导入数据只保存在本机浏览器，不会上传到 GitHub；换设备需要重新导入。</div>' +
+        '</div>' +
+        '<div class="practice-tip-row">' +
+          tip('fileText', '题目文件', 'JSON 结构最稳；TXT/MD 可使用页面提供的简单格式。') +
+          tip('headphones', '听力音频', '上传多个音频后会自动按文件名或顺序绑定，可在预览中调整。') +
+          tip('target', '自动统计', '导入卷同样计入分数趋势、题型强弱、错题本与练习记录。') +
+        '</div>' +
+      '</section>';
+    }
+    var questionCount = papers.reduce(function (n, p) { return n + CET6.data.paperQuestionCount(p); }, 0);
+    var audioCount = papers.reduce(function (n, p) {
+      var rows = CET6.data.getUnitsForPaper(p);
+      return n + rows.filter(function (r) { return r.unit.module === 'listening' && r.unit.audio; }).length;
+    }, 0);
+    return '<section class="practice-section">' +
+      '<div class="practice-summary">' +
+        '<div class="ps-item"><span class="ps-ico accent-blue">' + icon('upload') + '</span><div><b class="num">' + papers.length + '</b><small>套导入真题</small></div></div>' +
+        '<div class="ps-divider"></div>' +
+        '<div class="ps-item"><span class="ps-ico accent-ochre">' + icon('list') + '</span><div><b class="num">' + questionCount + '</b><small>道题</small></div></div>' +
+        '<div class="ps-divider"></div>' +
+        '<div class="ps-item"><span class="ps-ico accent-pine">' + icon('headphones') + '</span><div><b class="num">' + audioCount + '</b><small>段听力音频</small></div></div>' +
+        '<div class="ps-note">' + icon('info') + ' 导入卷保存在本机，可随时删除。</div>' +
+      '</div>' +
+      '<div class="paper-grid">' + papers.map(importCard).join('') + '</div>' +
+      '<div class="import-list-actions"><a class="btn btn-primary" href="#/imports">' + icon('upload') + ' 导入新的真题</a>' +
+        '<button class="btn btn-soft" type="button" data-action="download-template">' + icon('download') + ' 下载 JSON 模板</button></div>' +
+      '<div class="practice-tip-row">' +
+        tip('fileText', '导入卷可编辑', '删除后该卷的听力音频和题目会从本机移除，但历史作答记录仍保留。') +
+        tip('headphones', '音频绑定', '如果自动绑定不准确，可以在导入预览里逐个听力单元选择文件。') +
+        tip('chart', '计入统计', '导入卷的得分、错题和题型数据会自动进入我的数据。') +
+      '</div>' +
+    '</section>';
+  }
+
+  function importCard(paper) {
+    var count = CET6.data.paperQuestionCount(paper);
+    var progress = store.getPaperProgress(paper.id);
+    var best = progress ? progress.best : null;
+    var total = paper.totalPoints || 710;
+    var pct = best ? Math.round((best.earned / total) * 100) : 0;
+    var audioCount = CET6.data.getUnitsForPaper(paper).filter(function (r) {
+      return r.unit.module === 'listening' && r.unit.audio;
+    }).length;
+    return '<article class="paper-card accent-blue import-paper-card">' +
+      '<div class="paper-cover">' +
+        '<div class="paper-cover-top"><span class="paper-badge">导入真题</span><span class="paper-date">' + esc(paper.sourceName || '本地导入') + '</span></div>' +
+        '<div class="paper-cover-art">' + coverArt('blue') + '</div>' +
+        '<div class="paper-cover-bottom"><span>' + esc(paper.subtitle || '导入真题') + '</span><span class="num">' + Math.round(total) + '<em> 分</em></span></div>' +
+      '</div>' +
+      '<div class="paper-body">' +
+        '<div class="paper-head"><h3>' + esc(paper.title) + '</h3><span class="tag blue">' + icon('upload') + ' 已导入</span></div>' +
+        '<p class="paper-desc">' + esc(paper.description || '从本地真题文件导入的练习卷。') + '</p>' +
+        '<div class="paper-specs">' +
+          '<span>' + icon('list') + ' ' + count + ' 题</span>' +
+          '<span>' + icon('clock') + ' ' + (paper.durationMin || 130) + ' 分钟</span>' +
+          '<span>' + icon('headphones') + ' ' + audioCount + ' 段音频</span>' +
+        '</div>' +
+        '<div class="paper-progress">' +
+          (best
+            ? '<div class="spread small"><span>已练 ' + progress.count + ' 次</span><span>最佳 <b class="num">' + Math.round(best.earned) + ' / ' + Math.round(total) + '</b></span></div><div class="progress blue"><i style="width:' + pct + '%"></i></div>'
+            : '<div class="spread small muted"><span>还没有练过</span><span class="num">—</span></div><div class="progress"><i style="width:0%"></i></div>') +
+        '</div>' +
+        '<div class="paper-actions">' +
+          '<a class="btn btn-primary" href="#/quiz/paper/' + paper.id + '">' + icon('play') + ' ' + (best ? '再练一次' : '开始作答') + '</a>' +
+          (best ? '<a class="btn btn-ghost btn-sm" href="#/result/' + best.id + '">上次报告 ' + icon('arrowRight') + '</a>' : '') +
+          '<button class="btn btn-ghost btn-sm import-delete" type="button" data-action="delete-import" data-id="' + paper.id + '" title="删除这套导入真题">' + icon('trash') + '</button>' +
+        '</div>' +
+      '</div>' +
+    '</article>';
   }
 
   function mockSection() {
@@ -161,15 +247,41 @@
     crumb: '刷题 · 练习',
     render: function (ctx) {
       var tab = ctx.tab || 'mock';
-      if (['mock', 'sets', 'drills'].indexOf(tab) < 0) tab = 'mock';
+      if (['mock', 'sets', 'drills', 'imports'].indexOf(tab) < 0) tab = 'mock';
       return '<div class="page practice-page">' +
         ui.demoBanner() +
         practiceHeader(tab) +
         tabs(tab) +
-        (tab === 'mock' ? mockSection() : tab === 'sets' ? setsSection() : drillsSection()) +
+        (tab === 'mock' ? mockSection() : tab === 'sets' ? setsSection() : tab === 'drills' ? drillsSection() : importsSection()) +
       '</div>';
     },
-    mount: function () {}
+    mount: function () {
+      var page = document.querySelector('.practice-page');
+      if (!page) return;
+      page.addEventListener('click', function (e) {
+        if (e.target.closest('[data-action="download-template"]')) {
+          if (CET6.imports) CET6.imports.downloadTemplate();
+          return;
+        }
+        var del = e.target.closest('[data-action="delete-import"]');
+        if (del) {
+          var id = del.getAttribute('data-id');
+          CET6.confirmDialog({
+            title: '删除这套导入真题？',
+            message: '题目和已保存的听力音频会从本机移除。已经产生的练习记录仍会保留，但报告里的题目可能无法再打开。',
+            confirmText: '删除',
+            cancelText: '保留',
+            danger: true
+          }).then(function (ok) {
+            if (!ok) return;
+            CET6.imports.remove(id).then(function () {
+              CET6.toast('导入真题已删除');
+              CET6.rerender();
+            }).catch(function () { CET6.toast('删除失败，请稍后重试', 'alertCircle'); });
+          });
+        }
+      });
+    }
   };
 
   /* ----------------------------------------------------------

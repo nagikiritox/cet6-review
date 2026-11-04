@@ -45,6 +45,20 @@ python -m http.server 8000
 - **练习记录**：按月份分组的全部练习，可回看每次报告；支持导出 JSON 备份。
 - 学习设置：每日背词量、目标分数、考试日期；可清空全部数据。
 
+### 导入真实真题
+
+「刷题 → 导入真题」支持导入你自己的真题题目和听力音频：
+
+- 题目文件：`.json`、`.txt`、`.md`、`.pdf`。
+- 听力文件：`.mp3`、`.wav`、`.m4a`、`.ogg`、`.aac`，可多选。
+- 可选答案文件：答案与题目分开时，上传 `.txt` / `.md` / `.pdf` 答案文件。
+- 解析后会先进入预览：检查题目数量、校验选项/答案、逐个绑定听力音频，再保存。
+- 保存后成为一套独立的「导入真题」卷，支持计时、交卷、710 估分、主观题自评、错题本、分数趋势与题型统计。
+- 导入内容保存在浏览器的 `IndexedDB` 中，不会上传到 GitHub；不同设备不共享。部署更新不会清空导入数据，但清理浏览器站点数据会。
+- PDF 仅支持带文字层的文本型文件；扫描版 PDF 需要先 OCR。PDF 版式千差万别，选词填空、长篇匹配等部分可能无法完整识别，可以在预览中编辑提取文本后重新解析。
+- 导入页提供 JSON 和 TXT 模板下载，也可以直接粘贴题目文本解析。
+
+
 ## 首次打开会看到示例数据
 
 为了让数据主页一开始就有内容可看，第一次打开会生成一份**明确标注为「示例预览」**的记录。开始任意一次练习或背词后，示例会自动清除，换成你的真实记录；也可以点击页面上的「清除示例」立即清空。
@@ -54,15 +68,17 @@ python -m http.server 8000
 ```text
 cet6-review/
 ├─ index.html              # 应用入口、侧边栏 / 顶部栏 / 移动端导航
+├─ IMPORT_FORMAT.md        # 导入真题的 JSON / TXT 格式说明
 ├─ css/
 │  ├─ base.css             # 设计 token、字体、布局、通用组件
 │  └─ pages.css            # 首页 / 刷题 / 答题 / 单词 / 数据页样式
 ├─ js/
 │  ├─ utils.js             # 图标、格式化、数据索引、主题、弹窗、语音
 │  ├─ store.js             # localStorage、练习记录、错词、单词与统计
+│  ├─ imports.js           # 真题导入解析、IndexedDB 存储、音频映射
 │  ├─ components.js        # 音频播放器、折线图、雷达图、环形图、热力图
 │  ├─ app.js               # hash 路由、全局导航、主题切换
-│  └─ pages/               # home / practice / quiz / words / stats
+│  └─ pages/               # home / practice / imports / quiz / words / stats
 ├─ data/
 │  ├─ words.js             # 120 个核心词
 │  ├─ units-mock.js        # 2 套全真模拟题单元
@@ -71,6 +87,7 @@ cet6-review/
 │  └─ papers.js            # 套卷结构与计分配置
 └─ assets/
    ├─ fonts/               # Schibsted Grotesk 本地字体
+   ├─ vendor/              # PDF.js（PDF 文本提取）
    └─ audio/               # 18 段听力 MP3
 ```
 
@@ -86,3 +103,4 @@ cet6-review/
 - 换词：修改 `data/words.js`，保持 `id` 唯一即可。
 - 换主题色：在 `css/base.css` 的 `:root` 与 `:root[data-theme="dark"]` 中改 CSS 变量。
 - 换字体：把 woff2 文件放进 `assets/fonts/`，修改 `base.css` 顶部的 `@font-face` 与 `--font-sans`。
+
