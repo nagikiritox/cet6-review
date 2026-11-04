@@ -726,6 +726,7 @@
 .full-review-list { padding: 0 16px 16px; }
 .full-review-card .wrong-status.accent { background: var(--accent-soft); color: var(--accent); }
 .full-review-card .wrong-status.outline { background: var(--surface-2); color: var(--faint); }
+.full-review-card .wrong-index { flex: none; width: 22px; font-size: 10px; color: var(--faint); }
 .full-transcripts { margin-top: 14px; }
 .full-transcript-list { display: flex; flex-direction: column; gap: 8px; padding: 0 16px 16px; }
 .full-transcript { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }

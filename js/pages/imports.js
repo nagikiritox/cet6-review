@@ -69,7 +69,7 @@
       var p = packs[i];
       if (!p || !p.pdf || !p.source) continue;
       if (hash && p.pdf.sha256 && String(p.pdf.sha256).toLowerCase() === hash) return p;
-      if (!hash && p.pdf.size === size && basename(p.pdf.name) === name) return p;
+      if (p.pdf.size === size && (!hash || basename(p.pdf.name) === name)) return p;
     }
     return null;
   }

@@ -922,7 +922,7 @@
       var tone = it.answered ? (it.correct ? 'accent' : 'rose') : 'outline';
       var mark = it.answered ? (it.correct ? '正确' : '错误') : '未作答';
       return '<details class="wrong-review full-review-card" data-review="' + it.qid + '">' +
-        '<summary><span class="wrong-status ' + tone + '">' + icon(it.correct ? 'check' : (it.answered ? 'x' : 'minus')) + '</span>' +
+        '<summary><span class="wrong-index num">' + CET6.pad(idx + 1) + '</span><span class="wrong-status ' + tone + '">' + icon(it.correct ? 'check' : (it.answered ? 'x' : 'minus')) + '</span>' +
           '<div class="wrong-summary"><span class="wrong-tag">' + esc(data.moduleName(it.module)) + (q.tag ? ' · ' + esc(q.tag) : '') + ' · ' + mark + '</span>' +
           '<span class="wrong-stem en">' + esc(q.stem || unit.title) + '</span></div>' +
           '<span class="wrong-expand">' + icon('chevronDown') + '</span></summary>' +
