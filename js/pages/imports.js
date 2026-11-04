@@ -160,7 +160,7 @@
     var aInfo = document.getElementById('audioFilesInfo');
     if (aInfo) aInfo.innerHTML = fileChips(selectedAudioFiles, '还没有选择听力音频');
     var ansInfo = document.getElementById('answerFileInfo');
-    if (ansInfo) ansInfo.innerHTML = selectedAnswerFile ? fileChips([selectedAnswerFile], '') : '<span class="import-file-empty">可选：答案单独放在文本文件里时再选择</span>';
+    if (ansInfo) ansInfo.innerHTML = selectedAnswerFile ? fileChips([selectedAnswerFile], '') : '<span class="import-file-empty">可选：答案单独放在 TXT / MD / PDF 里时再选择</span>';
   }
 
   function autoMap() {
