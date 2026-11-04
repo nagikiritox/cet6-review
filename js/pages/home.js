@@ -83,8 +83,8 @@
             '<a class="board-card board-practice" href="#/practice">' +
               '<div class="board-top">' + ui.iconBadge('layers', 'pine') + '<span class="board-arrow">' + icon('arrowUpRight') + '</span></div>' +
               '<h3>刷题</h3>' +
-              '<p>全真模拟、套题训练与四类专项。听力音频就在题里，随时回放。</p>' +
-              '<div class="board-meta"><span><b class="num">' + CET6.data.papers.length + '</b> 套卷</span><span><b class="num">' + CET6.data.units.length + '</b> 个单元</span><span class="board-link">进入练习 ' + icon('arrowRight') + '</span></div>' +
+              '<p>全真模拟、套题训练、专项练习，也可以导入你自己的真题和听力音频。</p>' +
+              '<div class="board-meta"><span><b class="num">' + CET6.data.papers.length + '</b> 套卷</span><span><b class="num">' + CET6.data.units.length + '</b> 个单元</span>' + (CET6.imports && CET6.imports.count() ? '<span><b class="num">' + CET6.imports.count() + '</b> 套导入</span>' : '') + '<span class="board-link">进入练习 ' + icon('arrowRight') + '</span></div>' +
             '</a>' +
             '<a class="board-card board-words" href="#/words">' +
               '<div class="board-top">' + ui.iconBadge('bookOpen', 'ochre') + '<span class="board-arrow">' + icon('arrowUpRight') + '</span></div>' +

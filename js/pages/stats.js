@@ -35,6 +35,7 @@
           '<button type="button" data-trend="all" class="' + (trendFilter === 'all' ? 'active' : '') + '">全部</button>' +
           '<button type="button" data-trend="mock" class="' + (trendFilter === 'mock' ? 'active' : '') + '">全真模拟</button>' +
           '<button type="button" data-trend="set" class="' + (trendFilter === 'set' ? 'active' : '') + '">套题</button>' +
+          '<button type="button" data-trend="import" class="' + (trendFilter === 'import' ? 'active' : '') + '">导入</button>' +
         '</div>' +
       '</div>' +
       '<div id="trendChart">' + ui.lineChart(filterTrend(trends)) + '</div>' +
@@ -427,8 +428,8 @@
     el.innerHTML = Object.keys(groups).map(function (key) {
       return '<div class="history-group"><div class="history-group-head"><span>' + key + '</span><em>' + groups[key].length + ' 次</em></div>' +
         groups[key].map(function (a) {
-          var kindLabel = a.kind === 'mock' ? '全真模拟' : a.kind === 'set' ? '套题训练' : a.kind === 'wrong' ? '错题重练' : '专项练习';
-          var score = a.kind === 'mock' ? Math.round(a.earned) + ' / 710' : a.kind === 'set' ? Math.round(a.earned) + ' / 100' : a.accuracy + '%';
+          var kindLabel = a.kind === 'mock' ? '全真模拟' : a.kind === 'set' ? '套题训练' : a.kind === 'import' ? '导入真题' : a.kind === 'wrong' ? '错题重练' : '专项练习';
+          var score = a.kind === 'mock' ? Math.round(a.earned) + ' / 710' : a.kind === 'import' ? Math.round(a.earned) + ' / ' + Math.round(a.totalPoints || 710) : a.kind === 'set' ? Math.round(a.earned) + ' / 100' : a.accuracy + '%';
           return '<a class="history-row" href="#/result/' + a.id + '">' +
             '<span class="history-date"><b>' + CET6.fmtDate(a.finishedAt) + '</b><small>' + new Date(a.finishedAt).getFullYear() + '</small></span>' +
             '<span class="history-main"><b>' + esc(a.title) + (a.demo ? ' <span class="tag">示例</span>' : '') + '</b><small>' + kindLabel + ' · ' + a.totalQuestions + ' 题 · ' + CET6.fmtDuration(a.durationSec) + '</small></span>' +
@@ -466,6 +467,7 @@
           '<button type="button" data-history="all" class="active">全部</button>' +
           '<button type="button" data-history="mock">全真模拟</button>' +
           '<button type="button" data-history="set">套题训练</button>' +
+          '<button type="button" data-history="import">导入真题</button>' +
           '<button type="button" data-history="drill">专项练习</button>' +
           '<button type="button" data-history="wrong">错题重练</button>' +
         '</div>' +

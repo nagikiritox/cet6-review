@@ -28,9 +28,10 @@
     if (parts[0] === 'home') return { name: 'home', page: 'home', title: '首页' };
     if (parts[0] === 'practice') {
       var tab = parts[1] || 'mock';
-      if (['mock', 'sets', 'drills'].indexOf(tab) < 0) tab = 'mock';
-      return { name: 'practice', page: 'practice', tab: tab, title: '刷题', crumb: '刷题 · ' + ({ mock: '真题模拟', sets: '套题训练', drills: '专项练习' })[tab] };
+      if (['mock', 'sets', 'drills', 'imports'].indexOf(tab) < 0) tab = 'mock';
+      return { name: 'practice', page: 'practice', tab: tab, title: '刷题', crumb: '刷题 · ' + ({ mock: '真题模拟', sets: '套题训练', drills: '专项练习', imports: '导入真题' })[tab] };
     }
+    if (parts[0] === 'imports') return { name: 'imports', page: 'imports', title: '导入真题', crumb: '刷题 · 导入真题' };
     if (parts[0] === 'drill' && parts[1]) return { name: 'drill', page: 'drill', module: parts[1], title: '专项练习', crumb: '专项练习 · 单元' };
     if (parts[0] === 'quiz') {
       if (parts[1] === 'paper' && parts[2]) return { name: 'quiz', page: 'quiz', quizKind: 'paper', param: parts[2], title: '答题', crumb: '答题' };
@@ -56,6 +57,7 @@
     home: 'home',
     practice: 'practice',
     drill: 'practice',
+    imports: 'practice',
     quiz: 'practice',
     result: 'practice',
     words: 'words',
@@ -67,7 +69,7 @@
   };
 
   var CRUMB_ICON = {
-    home: 'home', practice: 'layers', drill: 'target', quiz: 'pen', result: 'award',
+    home: 'home', practice: 'layers', drill: 'target', imports: 'upload', quiz: 'pen', result: 'award',
     words: 'bookOpen', wordSession: 'bookOpen', stats: 'chart', wrong: 'bookmark', history: 'list', notFound: 'compass'
   };
 
@@ -240,14 +242,24 @@
      ---------------------------------------------------------- */
   function boot() {
     CET6.hydrateIcons(document);
-    store.ensureDemo();
-    if (!location.hash || location.hash === '#') {
-      history.replaceState(null, '', '#/home');
-    }
-    bindGlobal();
-    updateThemeButtons();
-    refreshChrome();
-    renderRoute();
+    var ready = CET6.imports && CET6.imports.init ? CET6.imports.init() : Promise.resolve();
+    ready.then(function () {
+      store.ensureDemo();
+      if (!location.hash || location.hash === '#') {
+        history.replaceState(null, '', '#/home');
+      }
+      bindGlobal();
+      updateThemeButtons();
+      refreshChrome();
+      renderRoute();
+    }).catch(function (err) {
+      console.error(err);
+      store.ensureDemo();
+      bindGlobal();
+      updateThemeButtons();
+      refreshChrome();
+      renderRoute();
+    });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
