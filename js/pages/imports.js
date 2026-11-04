@@ -253,7 +253,9 @@
               result.errors = result.errors.filter(function (e) { return !/缺少可识别的答案/.test(e); });
             } catch (e) { result.warnings.push('答案文件读取失败：' + e.message); }
           }
-          pending = { record: result.record || { title: '', sections: [] }, errors: result.errors || [], warnings: result.warnings || [], sourceKind: 'pdf', pdfPages: extracted.pages };
+          var pdfWarnings = (result.warnings || []).slice();
+          pdfWarnings.unshift('未匹配到内置解析包：本次只提取题目；听力原文、答案与解析需要另外导入 JSON，或后续接入 AI 解析服务。');
+          pending = { record: result.record || { title: '', sections: [] }, errors: result.errors || [], warnings: pdfWarnings, sourceKind: 'pdf', pdfPages: extracted.pages };
           if (pending.record && pending.record.id) {
             audioMap = CET6.imports.autoMapAudio(pending.record, selectedAudioFiles);
           }
