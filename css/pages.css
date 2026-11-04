@@ -722,6 +722,17 @@
 .wrong-answers b.wrong { color: var(--rose); }
 .wrong-answers b.right { color: var(--accent); }
 .wrong-explain { margin-top: 10px; font-size: 11.5px; line-height: 1.7; color: var(--muted); }
+.full-review-wrap { margin-top: 12px; }
+.full-review-list { padding: 0 16px 16px; }
+.full-review-card .wrong-status.accent { background: var(--accent-soft); color: var(--accent); }
+.full-review-card .wrong-status.outline { background: var(--surface-2); color: var(--faint); }
+.full-review-card .wrong-index { flex: none; width: 22px; font-size: 10px; color: var(--faint); }
+.full-transcripts { margin-top: 14px; }
+.full-transcript-list { display: flex; flex-direction: column; gap: 8px; padding: 0 16px 16px; }
+.full-transcript { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.full-transcript summary { cursor: pointer; list-style: none; padding: 11px 14px; font-size: 11.5px; font-weight: 600; }
+.full-transcript summary::-webkit-details-marker { display: none; }
+.full-transcript .transcript-text { padding: 0 14px 14px; }
 .attempt-details { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
 .attempt-details > summary {
   list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px;
@@ -1490,6 +1501,7 @@
 .import-issues p { margin-top: 3px; }
 .import-issues.errors { background: var(--rose-soft); color: var(--rose); }
 .import-issues.warnings { background: var(--ochre-soft); color: var(--ochre-ink); }
+.import-issues.success { background: var(--accent-soft); color: var(--accent); }
 .import-section-list { display: flex; flex-direction: column; gap: 5px; margin-top: 14px; }
 .import-section-row {
   display: flex; align-items: center; gap: 11px; padding: 9px 11px;

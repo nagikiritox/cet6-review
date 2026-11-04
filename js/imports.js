@@ -86,18 +86,19 @@
 
   function normalizeAnswer(answer, options) {
     if (typeof answer === 'number' && isFinite(answer)) {
-      if (answer >= 0 && answer < 4) return answer;
-      if (answer >= 1 && answer <= 4) return answer - 1;
+      if (answer >= 0 && answer < 15) return answer;
+      if (answer >= 1 && answer <= 15) return answer - 1;
       return -1;
     }
     var a = str(answer).trim();
     if (!a) return -1;
-    var m = /^([A-Da-d])(?:[\.\)、].*)?$/.exec(a);
+    var m = /^([A-Oa-o])(?:[\.\)、].*)?$/.exec(a);
     if (m) return m[1].toUpperCase().charCodeAt(0) - 65;
     if (/^[0-3]$/.test(a)) return Number(a);
-    // An answer such as "B. text" is handled above; an explicit index "4" is 1-based.
-    if (/^4$/.test(a)) return 3;
-    if (/^[1-4]$/.test(a)) return Number(a) - 1;
+    if (/^\d+$/.test(a)) {
+      var n = Number(a);
+      return n >= 1 && n <= 15 ? n - 1 : -1;
+    }
     if (options && options.length) {
       for (var i = 0; i < options.length; i++) {
         if (str(options[i]).trim() === a) return i;
@@ -148,8 +149,8 @@
       minWords: num(q.minWords || q.words, module === 'translation' ? 120 : (isTask ? 150 : 0)) || 0
     };
     if (!isTask) {
-      if (options.length !== 4) {
-        errors.push('第 ' + (index + 1) + ' 题：选择题需要 4 个选项（当前 ' + options.length + ' 个）');
+      if (options.length < 2 || options.length > 15) {
+        errors.push('第 ' + (index + 1) + ' 题：选择题需要 2-15 个选项（当前 ' + options.length + ' 个）');
       }
       question.answer = normalizeAnswer(q.answer !== undefined ? q.answer : q.correct, options);
       if (question.answer < 0) errors.push('第 ' + (index + 1) + ' 题：缺少可识别的答案');
@@ -516,14 +517,14 @@
   function parseAnswerKey(text) {
     var map = {};
     var source = String(text || '').replace(/\r\n?/g, '\n');
-    var range = /(\d+)\s*[-–~]\s*(\d+)\s*[:：]?\s*([A-Da-d\s,，]+)/g;
+    var range = /(\d+)\s*[-–~]\s*(\d+)\s*[:：]?\s*([A-Oa-o\s,，]+)/g;
     var m;
     while ((m = range.exec(source))) {
       var start = Number(m[1]);
-      var letters = m[3].replace(/[^A-Da-d]/g, '').split('');
+      var letters = m[3].replace(/[^A-Oa-o]/g, '').split('');
       letters.forEach(function (l, i) { map[start + i] = l; });
     }
-    var pair = /(\d+)\s*[\.、:：\)]?\s*([A-Da-d])\b/g;
+    var pair = /(\d+)\s*[\.、:：\)]?\s*([A-Oa-o])\b/g;
     while ((m = pair.exec(source))) map[Number(m[1])] = m[2];
     return map;
   }
@@ -1019,3 +1020,4 @@
     _state: state
   };
 })();
+
